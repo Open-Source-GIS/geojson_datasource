@@ -40,11 +40,11 @@ void geojson_datasource::bind() const
     if (is_bound_) return;
 
     // std::ifstream in_(file_.c_str(),std::ios_base::in | std::ios_base::binary);
-    boost::shared_ptr<std::ifstream> in_ = boost::make_shared<std::ifstream>(file_.c_str(),std::ios_base::in | std::ios_base::binary);
-    in_->seekg(0, std::ios::end);
-    file_length_ = in_->tellg();
+    std::ifstream in_(file_.c_str(),std::ios_base::in | std::ios_base::binary);
+    in_.seekg(0, std::ios::end);
+    file_length_ = in_.tellg();
 
-    if (!in_->is_open())
+    if (!in_.is_open())
         throw mapnik::datasource_exception("GeoJSON Plugin: could not open: '" + file_ + "'");
 
     extent_.init(-20037508.34,-20037508.34,20037508.34,20037508.34);
@@ -88,7 +88,10 @@ mapnik::featureset_ptr geojson_datasource::features(mapnik::query const& q) cons
     // if the query box intersects our world extent then query for features
     if (extent_.intersects(q.get_bbox()))
     {
-        return boost::make_shared<geojson_featureset>(q.get_bbox(), desc_.get_encoding(), in_);
+        return boost::make_shared<geojson_featureset>(q.get_bbox(),
+                desc_.get_encoding(),
+                // boost::make_shared<std::ifstream>(in_)
+                in_);
     }
 
     // otherwise return an empty featureset pointer

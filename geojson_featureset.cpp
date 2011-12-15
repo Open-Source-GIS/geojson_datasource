@@ -73,11 +73,10 @@ static yajl_callbacks callbacks = {
 geojson_featureset::geojson_featureset(
     mapnik::box2d<double> const& box,
     std::string const& encoding,
-    boost::shared_ptr<std::ifstream> const& in_)
+    std::ifstream const& in)
     : box_(box),
       feature_id_(1),
-      tr_(new mapnik::transcoder(encoding),
-      in_(in_)) { }
+      tr_(new mapnik::transcoder(encoding)) { }
 
 geojson_featureset::~geojson_featureset() { }
 
@@ -87,6 +86,7 @@ mapnik::feature_ptr geojson_featureset::next()
     {
         // create a new feature
         mapnik::feature_ptr feature(mapnik::feature_factory::create(feature_id_));
+
 
         yajl_handle hand = yajl_alloc(
             // callbacks
@@ -99,7 +99,7 @@ mapnik::feature_ptr geojson_featureset::next()
         char* buffer = new char [100];
 
         do {
-            in_.read(buffer, 100);
+            in.read(buffer, 100);
 
             yajl_parse(hand,
                     (const unsigned char*) buffer,
