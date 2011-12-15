@@ -2,6 +2,9 @@
 #include "geojson_datasource.hpp"
 #include "geojson_featureset.hpp"
 
+#include <fstream>
+#include <iostream>
+
 // boost
 #include <boost/make_shared.hpp>
 #include <boost/algorithm/string.hpp>
@@ -34,6 +37,11 @@ geojson_datasource::geojson_datasource(parameters const& params, bool bind)
 void geojson_datasource::bind() const
 {
     if (is_bound_) return;
+
+    std::ifstream in(file_.c_str(),std::ios_base::in | std::ios_base::binary);
+
+    if (!in.is_open())
+        throw mapnik::datasource_exception("GeoJSON Plugin: could not open: '" + file_ + "'");
 
     extent_.init(-20037508.34,-20037508.34,20037508.34,20037508.34);
 

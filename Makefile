@@ -27,4 +27,7 @@ clean:
 deploy:
 	cp geojson.input /usr/local/lib/mapnik/input/
 
-do: clean all deploy
+test:
+	mapnik-render.js test.xml test.png
+
+do: clean all deploy test
