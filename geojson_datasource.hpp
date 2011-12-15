@@ -1,6 +1,8 @@
 #ifndef FILE_DATASOURCE_HPP
 #define FILE_DATASOURCE_HPP
 
+#include <fstream>
+
 // mapnik
 #include <mapnik/datasource.hpp>
 
@@ -22,12 +24,11 @@ private:
     // recommended naming convention of datasource members:
     // name_, type_, extent_, and desc_
     static const std::string name_;
-    const mapnik::projection merc_;
-    const mapnik::projection wgs84_;
     int type_;
     mutable mapnik::layer_descriptor desc_;
+    mutable std::string file_length_;
     mutable std::string file_;
-    mutable std::string thisurl_;
+    mutable std::ifstream in_;
     mutable mapnik::box2d<double> extent_;
 };
 

@@ -1,6 +1,8 @@
 #ifndef HELLO_FEATURESET_HPP
 #define HELLO_FEATURESET_HPP
 
+#include <fstream>
+
 // mapnik
 #include <mapnik/datasource.hpp>
 
@@ -12,7 +14,9 @@ class geojson_featureset : public mapnik::Featureset
 {
 public:
     // this constructor can have any arguments you need
-    geojson_featureset(mapnik::box2d<double> const& box, std::string const& encoding);
+    geojson_featureset(mapnik::box2d<double> const& box,
+            std::string const& encoding,
+            boost::shared_ptr<std::ifstream> const& in_);
 
     // desctructor
     virtual ~geojson_featureset();

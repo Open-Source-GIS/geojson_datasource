@@ -2,11 +2,12 @@
 #include <mapnik/feature_factory.hpp>
 #include <mapnik/geometry.hpp>
 
+#include <fstream>
+
 // yajl
 #include "yajl/yajl_parse.h"
 
 #include "geojson_featureset.hpp"
-
 
 static int gj_start_map(void * ctx)
 {
@@ -31,7 +32,7 @@ static int gj_null(void * ctx)
 static int gj_number(void * ctx, const char* str, size_t t)
 {
     std::cout << str << "\n";
-    return 1;
+    return 0;
 }
 
 static int gj_boolean(void * ctx, int)
@@ -69,10 +70,14 @@ static yajl_callbacks callbacks = {
     gj_end_array
 };
 
-geojson_featureset::geojson_featureset(mapnik::box2d<double> const& box, std::string const& encoding)
+geojson_featureset::geojson_featureset(
+    mapnik::box2d<double> const& box,
+    std::string const& encoding,
+    boost::shared_ptr<std::ifstream> const& in_)
     : box_(box),
       feature_id_(1),
-      tr_(new mapnik::transcoder(encoding)) { }
+      tr_(new mapnik::transcoder(encoding),
+      in_(in_)) { }
 
 geojson_featureset::~geojson_featureset() { }
 
@@ -82,6 +87,25 @@ mapnik::feature_ptr geojson_featureset::next()
     {
         // create a new feature
         mapnik::feature_ptr feature(mapnik::feature_factory::create(feature_id_));
+
+        yajl_handle hand = yajl_alloc(
+            // callbacks
+            &callbacks, NULL,
+            // context
+            &feature);
+
+        yajl_config(hand, yajl_allow_comments, 1);
+
+        char* buffer = new char [100];
+
+        do {
+            in_.read(buffer, 100);
+
+            yajl_parse(hand,
+                    (const unsigned char*) buffer,
+                    // (const unsigned char *) example.c_str(),
+                    100);
+        } while (0 /* ps != yajl_status.yajl_status_client_canceled */);
 
         // increment the count so that we only return one feature
         ++feature_id_;
