@@ -24,7 +24,6 @@ geojson_datasource::geojson_datasource(parameters const& params, bool bind)
     type_(datasource::Vector),
     desc_(*params_.get<std::string>("type"),
         *params_.get<std::string>("encoding","utf-8")),
-    file_length_(0),
     file_(*params_.get<std::string>("file","")),
     extent_()
 {
@@ -38,14 +37,6 @@ geojson_datasource::geojson_datasource(parameters const& params, bool bind)
 void geojson_datasource::bind() const
 {
     if (is_bound_) return;
-
-    // std::ifstream in_(file_.c_str(),std::ios_base::in | std::ios_base::binary);
-    std::ifstream in_(file_.c_str(),std::ios_base::in | std::ios_base::binary);
-    in_.seekg(0, std::ios::end);
-    file_length_ = in_.tellg();
-
-    if (!in_.is_open())
-        throw mapnik::datasource_exception("GeoJSON Plugin: could not open: '" + file_ + "'");
 
     extent_.init(-20037508.34,-20037508.34,20037508.34,20037508.34);
 
@@ -90,8 +81,7 @@ mapnik::featureset_ptr geojson_datasource::features(mapnik::query const& q) cons
     {
         return boost::make_shared<geojson_featureset>(q.get_bbox(),
                 desc_.get_encoding(),
-                // boost::make_shared<std::ifstream>(in_)
-                in_);
+                file_);
     }
 
     // otherwise return an empty featureset pointer

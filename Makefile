@@ -25,7 +25,7 @@ clean:
 	rm -f $(BIN)
 
 deploy:
-	cp geojson.input /usr/local/lib/mapnik/input/
+	cp geojson.input $(shell mapnik-config --input-plugins)
 
 test:
 	mapnik-render.js test.xml test.png

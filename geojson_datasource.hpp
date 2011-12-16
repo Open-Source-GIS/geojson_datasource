@@ -26,9 +26,7 @@ private:
     static const std::string name_;
     int type_;
     mutable mapnik::layer_descriptor desc_;
-    mutable std::string file_length_;
     mutable std::string file_;
-    mutable std::ifstream in_;
     mutable mapnik::box2d<double> extent_;
 };
 

@@ -3,19 +3,41 @@
 #include <mapnik/geometry.hpp>
 
 #include <fstream>
+#include <iostream>
 
 // yajl
 #include "yajl/yajl_parse.h"
 
 #include "geojson_featureset.hpp"
 
+enum parser_state {
+    parser_outside,
+    parser_in_coordinates,
+    parser_in_type
+};
+
+struct fm {
+    mapnik::feature_ptr feature;
+    parser_state state;
+};
+
 static int gj_start_map(void * ctx)
 {
     return 1;
 }
 
-static int gj_map_key(void * ctx, const unsigned char*, size_t t)
+static int gj_map_key(void * ctx, const unsigned char* key, size_t t)
 {
+    std::string key_ = std::string((const char*) key, t);
+    std::clog << key_ << "\n";
+    if (key_ == "type")
+    {
+        ((fm *) ctx)->state = parser_in_type;
+    }
+    if (key_ == "coordinates")
+    {
+        ((fm *) ctx)->state = parser_in_coordinates;
+    }
     return 1;
 }
 
@@ -31,8 +53,17 @@ static int gj_null(void * ctx)
 
 static int gj_number(void * ctx, const char* str, size_t t)
 {
-    std::cout << str << "\n";
-    return 0;
+    std::string str_ = std::string((const char*) str, t);
+    double x = boost::lexical_cast<double>(str_);
+
+    if (((fm *) ctx)->state == parser_in_coordinates)
+    {
+        std::cout << x << "\n";
+    }
+    else
+    {
+    }
+    return 1;
 }
 
 static int gj_boolean(void * ctx, int)
@@ -42,17 +73,33 @@ static int gj_boolean(void * ctx, int)
 
 static int gj_string(void * ctx, const unsigned char* str, size_t t)
 {
-    std::cout << str << "\n";
+    std::string str_ = std::string((const char*) str, t);
+    if (((fm *) ctx)->state == parser_in_type)
+    {
+        if (str_ == "Point")
+        {
+            mapnik::geometry_type * pt = new mapnik::geometry_type(mapnik::Point);
+            ((fm *) ctx)->feature->add_geometry(pt);
+        }
+    }
     return 1;
 }
 
 static int gj_start_array(void * ctx)
 {
+    if (((fm *) ctx)->state == parser_in_coordinates)
+    {
+        ((fm *) ctx)->state = parser_in_coordinate_pair;
+    }
     return 1;
 }
 
 static int gj_end_array(void * ctx)
 {
+    if (((fm *) ctx)->state == parser_in_coordinate_pair)
+    {
+        ((fm *) ctx)->state = parser_in_coordinates;
+    }
     return 1;
 }
 
@@ -73,39 +120,57 @@ static yajl_callbacks callbacks = {
 geojson_featureset::geojson_featureset(
     mapnik::box2d<double> const& box,
     std::string const& encoding,
-    std::ifstream const& in)
+    std::string const& file)
     : box_(box),
       feature_id_(1),
-      tr_(new mapnik::transcoder(encoding)) { }
+      file_length_(0),
+      file_(file),
+      tr_(new mapnik::transcoder(encoding)) {
+
+
+}
 
 geojson_featureset::~geojson_featureset() { }
+
 
 mapnik::feature_ptr geojson_featureset::next()
 {
     if (feature_id_ == 1)
     {
+        std::ifstream in_(file_.c_str(), std::ios_base::in | std::ios_base::binary);
+        in_.seekg(0, std::ios::end);
+        file_length_ = in_.tellg();
+        if (!in_.is_open()) {
+            throw mapnik::datasource_exception("GeoJSON Plugin: could not open: '" + file_ + "'");
+        }
+        in_.seekg(0, std::ios::beg);
         // create a new feature
         mapnik::feature_ptr feature(mapnik::feature_factory::create(feature_id_));
 
+        fm state_bundle;
+        state_bundle.feature = feature;
+        state_bundle.state = parser_outside;
 
         yajl_handle hand = yajl_alloc(
-            // callbacks
             &callbacks, NULL,
-            // context
-            &feature);
+            &state_bundle);
 
         yajl_config(hand, yajl_allow_comments, 1);
+        
+        std::string input_line;
 
-        char* buffer = new char [100];
+        while (std::getline(in_, input_line)) {
+            int parse_result = yajl_parse(hand,
+                    (const unsigned char*) input_line.c_str(),
+                    input_line.length());
 
-        do {
-            in.read(buffer, 100);
-
-            yajl_parse(hand,
-                    (const unsigned char*) buffer,
-                    // (const unsigned char *) example.c_str(),
-                    100);
-        } while (0 /* ps != yajl_status.yajl_status_client_canceled */);
+            char* s;
+            if (parse_result != yajl_status_ok)
+            {
+                // unsigned char *str = yajl_get_error(hand, 0,  (const unsigned char*) s, strlen(s));
+                throw mapnik::datasource_exception("GeoJSON Plugin: invalid GeoJSON detected");
+            }
+        }
 
         // increment the count so that we only return one feature
         ++feature_id_;

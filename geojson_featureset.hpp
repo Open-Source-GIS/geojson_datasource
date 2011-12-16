@@ -15,13 +15,15 @@ class geojson_featureset : public mapnik::Featureset
 public:
     geojson_featureset(mapnik::box2d<double> const& box,
             std::string const& encoding,
-            std::ifstream const& in);
+            std::string const& file);
     virtual ~geojson_featureset();
     mapnik::feature_ptr next();
 private:
     mapnik::box2d<double> const& box_;
     mutable int feature_id_;
-    mutable std::ifstream in;
+    mutable int file_length_;
+    mutable std::ifstream in_;
+    mutable std::string file_;
     boost::scoped_ptr<mapnik::transcoder> tr_;
 };
 
