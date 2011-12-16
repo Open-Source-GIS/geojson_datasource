@@ -85,6 +85,19 @@ static int gj_end_map(void * ctx)
 
 static int gj_null(void * ctx)
 {
+    if (((fm *) ctx)->state == parser_in_properties)
+    {
+        boost::put(*((fm *) ctx)->feature, ((fm *) ctx)->property_name, mapnik::value_null());
+    }
+    return 1;
+}
+
+static int gj_boolean(void * ctx, int x)
+{
+    if (((fm *) ctx)->state == parser_in_properties)
+    {
+        boost::put(*((fm *) ctx)->feature, ((fm *) ctx)->property_name, x);
+    }
     return 1;
 }
 
@@ -105,14 +118,13 @@ static int gj_number(void * ctx, const char* str, size_t t)
             ((fm *) ctx)->pair[1] = x;
         }
     }
+    if (((fm *) ctx)->state == parser_in_properties)
+    {
+        boost::put(*((fm *) ctx)->feature, ((fm *) ctx)->property_name, x);
+    }
     if (((fm *) ctx)->state == parser_in_coordinates)
     {
     }
-    return 1;
-}
-
-static int gj_boolean(void * ctx, int)
-{
     return 1;
 }
 
