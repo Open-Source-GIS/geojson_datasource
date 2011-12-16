@@ -138,6 +138,16 @@ static int gj_string(void * ctx, const unsigned char* str, size_t t)
             mapnik::geometry_type * pt = new mapnik::geometry_type(mapnik::Point);
             ((fm *) ctx)->feature->add_geometry(pt);
         }
+        if (str_ == "LineString")
+        {
+            mapnik::geometry_type * pt = new mapnik::geometry_type(mapnik::LineString);
+            ((fm *) ctx)->feature->add_geometry(pt);
+        }
+        if (str_ == "Polygon")
+        {
+            mapnik::geometry_type * pt = new mapnik::geometry_type(mapnik::Polygon);
+            ((fm *) ctx)->feature->add_geometry(pt);
+        }
     }
     if (((fm *) ctx)->state == parser_in_properties)
     {
@@ -240,19 +250,17 @@ mapnik::feature_ptr geojson_featureset::next()
             }
             else if (parse_result == yajl_status_client_canceled)
             {
+                return state_bundle.feature;
             }
             else if (parse_result == yajl_status_ok)
             {
-                feature_id_ = 1;
                 return state_bundle.feature;
             }
         }
 
-        // increment the count so that we only return one feature
-        ++feature_id_;
-
         // return the feature!
         // return feature;
+        // return mapnik::feature_ptr();
         return state_bundle.feature;
     }
 
