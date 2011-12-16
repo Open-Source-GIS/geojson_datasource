@@ -10,11 +10,16 @@
 
 #include "geojson_featureset.hpp"
 
+mapnik::transcoder* tr = new mapnik::transcoder("utf-8");
+
 enum parser_state {
     parser_outside,
     parser_in_featurecollection,
+    parser_in_features,
     parser_in_feature,
+    parser_in_geometry,
     parser_in_coordinates,
+    parser_in_properties,
     parser_in_coordinate_pair,
     parser_in_type
 };
@@ -22,6 +27,7 @@ enum parser_state {
 struct fm {
     mapnik::feature_ptr feature;
     double pair[2];
+    std::string property_name;
     parser_state state;
 };
 
@@ -33,20 +39,47 @@ static int gj_start_map(void * ctx)
 static int gj_map_key(void * ctx, const unsigned char* key, size_t t)
 {
     std::string key_ = std::string((const char*) key, t);
-    std::clog << key_ << "\n";
-    if (key_ == "type")
+    if (((fm *) ctx)->state == parser_in_properties)
     {
-        ((fm *) ctx)->state = parser_in_type;
+        ((fm *) ctx)->property_name = key_;
     }
-    if (key_ == "coordinates")
+    else
     {
-        ((fm *) ctx)->state = parser_in_coordinates;
+        if (key_ == "features")
+        {
+            ((fm *) ctx)->state = parser_in_features;
+        }
+        if (key_ == "geometry")
+        {
+            ((fm *) ctx)->state = parser_in_geometry;
+        }
+        if (key_ == "type")
+        {
+            ((fm *) ctx)->state = parser_in_type;
+        }
+        if (key_ == "properties")
+        {
+            ((fm *) ctx)->state = parser_in_properties;
+        }
+        if (key_ == "coordinates")
+        {
+            ((fm *) ctx)->state = parser_in_coordinates;
+        }
     }
     return 1;
 }
 
 static int gj_end_map(void * ctx)
 {
+    if (((fm *) ctx)->state == parser_in_properties ||
+        ((fm *) ctx)->state == parser_in_geometry)
+    {
+        ((fm *) ctx)->state = parser_in_feature;
+    }
+    if (((fm *) ctx)->state == parser_in_feature)
+    {
+        return 0;
+    }
     return 1;
 }
 
@@ -72,7 +105,7 @@ static int gj_number(void * ctx, const char* str, size_t t)
             ((fm *) ctx)->pair[1] = x;
         }
     }
-    else
+    if (((fm *) ctx)->state == parser_in_coordinates)
     {
     }
     return 1;
@@ -93,6 +126,11 @@ static int gj_string(void * ctx, const unsigned char* str, size_t t)
             mapnik::geometry_type * pt = new mapnik::geometry_type(mapnik::Point);
             ((fm *) ctx)->feature->add_geometry(pt);
         }
+    }
+    if (((fm *) ctx)->state == parser_in_properties)
+    {
+        UnicodeString ustr = tr->transcode(str_.c_str());
+        boost::put(*((fm *) ctx)->feature, ((fm *) ctx)->property_name, ustr);
     }
     return 1;
 }
@@ -145,13 +183,9 @@ geojson_featureset::geojson_featureset(
       feature_id_(1),
       file_length_(0),
       file_(file),
-      tr_(new mapnik::transcoder(encoding)) {
-
-
-}
+      tr_(new mapnik::transcoder(encoding)) { }
 
 geojson_featureset::~geojson_featureset() { }
-
 
 mapnik::feature_ptr geojson_featureset::next()
 {
@@ -187,49 +221,23 @@ mapnik::feature_ptr geojson_featureset::next()
                     input_line.length());
 
             char* s;
-            if (parse_result != yajl_status_ok)
+            if (parse_result == yajl_status_error)
             {
                 // unsigned char *str = yajl_get_error(hand, 0,  (const unsigned char*) s, strlen(s));
                 throw mapnik::datasource_exception("GeoJSON Plugin: invalid GeoJSON detected");
+            }
+            else if (parse_result == yajl_status_client_canceled)
+            {
+            }
+            else if (parse_result == yajl_status_ok)
+            {
+                feature_id_ = 1;
+                return state_bundle.feature;
             }
         }
 
         // increment the count so that we only return one feature
         ++feature_id_;
-
-        /*
-        // create an attribute pair of key:value
-        UnicodeString ustr = tr_->transcode("geojson world!");
-        boost::put(*feature,"key",ustr);
-
-        // we need a geometry to display so just for fun here
-        // we take the center of the bbox that was used to query
-        // since we don't actually have any data to pull from...
-        mapnik::coord2d center = box_.center();
-
-        // create a new point geometry
-        mapnik::geometry_type * pt = new mapnik::geometry_type(mapnik::Point);
-
-        // we use path type geometries in Mapnik to fit nicely with AGG and Cairo
-        // here we stick an x,y pair into the geometry using move_to()
-        pt->move_to(center.x,center.y);
-
-        // add the geometry to the feature
-        feature->add_geometry(pt);
-
-        // A feature usually will have just one geometry of a given type
-        // but mapnik does support many geometries per feature of any type
-        // so here we draw a line around the point
-        mapnik::geometry_type * line = new mapnik::geometry_type(mapnik::LineString);
-        line->move_to(box_.minx(),box_.miny());
-        line->line_to(box_.minx(),box_.maxy());
-        line->line_to(box_.maxx(),box_.maxy());
-        line->line_to(box_.maxx(),box_.miny());
-        line->line_to(box_.minx(),box_.miny());
-        feature->add_geometry(line);
-        */
-
-
 
         // return the feature!
         // return feature;

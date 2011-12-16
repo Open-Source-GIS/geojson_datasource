@@ -3,7 +3,7 @@
         <Rule>
             <PointSymbolizer/>
             <!-- the hello world sample hardcodes 'key' as the hypothetical field name -->
-            <TextSymbolizer size="10" dx="5" dy="5" face-name="DejaVu Sans Book">[key]</TextSymbolizer>
+            <TextSymbolizer size="10" dx="5" dy="5" face-name="DejaVu Sans Book">[hello]</TextSymbolizer>
             <LineSymbolizer stroke="green" stroke-width="3"/>
         </Rule>
     </Style>
@@ -14,7 +14,7 @@
             <!-- here we create a 'hello' type datasource which simply
             displays a point in the middle of the world's boundin box -->
             <Parameter name="type">geojson</Parameter>
-            <Parameter name="file">random_points.geojson</Parameter>
+            <Parameter name="file">nice_geojson.geojson</Parameter>
         </Datasource>
     </Layer>
 </Map>
