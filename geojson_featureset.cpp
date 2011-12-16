@@ -12,12 +12,16 @@
 
 enum parser_state {
     parser_outside,
+    parser_in_featurecollection,
+    parser_in_feature,
     parser_in_coordinates,
+    parser_in_coordinate_pair,
     parser_in_type
 };
 
 struct fm {
     mapnik::feature_ptr feature;
+    double pair[2];
     parser_state state;
 };
 
@@ -59,6 +63,14 @@ static int gj_number(void * ctx, const char* str, size_t t)
     if (((fm *) ctx)->state == parser_in_coordinates)
     {
         std::cout << x << "\n";
+        if (((fm *) ctx)->pair[0] == NULL)
+        {
+            ((fm *) ctx)->pair[0] = x;
+        }
+        else if (((fm *) ctx)->pair[1] == NULL)
+        {
+            ((fm *) ctx)->pair[1] = x;
+        }
     }
     else
     {
@@ -99,6 +111,14 @@ static int gj_end_array(void * ctx)
     if (((fm *) ctx)->state == parser_in_coordinate_pair)
     {
         ((fm *) ctx)->state = parser_in_coordinates;
+    }
+    if (((fm *) ctx)->state == parser_in_coordinates)
+    {
+        ((fm *) ctx)->state = parser_outside;
+        ((fm *) ctx)->feature->get_geometry(
+            ((fm *) ctx)->feature->num_geometries() - 1).move_to(
+            ((fm *) ctx)->pair[0],
+            ((fm *) ctx)->pair[1]);
     }
     return 1;
 }
@@ -150,6 +170,8 @@ mapnik::feature_ptr geojson_featureset::next()
         fm state_bundle;
         state_bundle.feature = feature;
         state_bundle.state = parser_outside;
+        state_bundle.pair[0] = NULL;
+        state_bundle.pair[1] = NULL;
 
         yajl_handle hand = yajl_alloc(
             &callbacks, NULL,
@@ -175,6 +197,7 @@ mapnik::feature_ptr geojson_featureset::next()
         // increment the count so that we only return one feature
         ++feature_id_;
 
+        /*
         // create an attribute pair of key:value
         UnicodeString ustr = tr_->transcode("geojson world!");
         boost::put(*feature,"key",ustr);
@@ -204,9 +227,13 @@ mapnik::feature_ptr geojson_featureset::next()
         line->line_to(box_.maxx(),box_.miny());
         line->line_to(box_.minx(),box_.miny());
         feature->add_geometry(line);
+        */
+
+
 
         // return the feature!
-        return feature;
+        // return feature;
+        return state_bundle.feature;
     }
 
     // otherwise return an empty feature
