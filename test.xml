@@ -3,7 +3,7 @@
         <Rule>
             <PointSymbolizer/>
             <!-- the hello world sample hardcodes 'key' as the hypothetical field name -->
-            <TextSymbolizer size="10" dx="5" dy="5" face-name="DejaVu Sans Book">[hello]</TextSymbolizer>
+            <TextSymbolizer size="10" dx="5" dy="5" face-name="DejaVu Sans Book">[age]</TextSymbolizer>
             <LineSymbolizer stroke="green" stroke-width="3"/>
         </Rule>
     </Style>

@@ -34,6 +34,7 @@ geojson_datasource::geojson_datasource(parameters const& params, bool bind)
     }
 }
 
+// FIXME: implement
 void geojson_datasource::bind() const
 {
     if (is_bound_) return;
@@ -58,6 +59,7 @@ int geojson_datasource::type() const
     return type_;
 }
 
+// FIXME: implement
 mapnik::box2d<double> geojson_datasource::envelope() const
 {
     if (!is_bound_) bind();
@@ -88,11 +90,9 @@ mapnik::featureset_ptr geojson_datasource::features(mapnik::query const& q) cons
     return mapnik::featureset_ptr();
 }
 
+// FIXME: implement
 mapnik::featureset_ptr geojson_datasource::features_at_point(mapnik::coord2d const& pt) const
 {
     if (!is_bound_) bind();
-
-    // features_at_point is rarely used - only by custom applications,
-    // so for this sample plugin let's do nothing...
     return mapnik::featureset_ptr();
 }
