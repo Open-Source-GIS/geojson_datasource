@@ -58,6 +58,16 @@ static int gj_end_map(void * ctx)
     }
     else if (((fm *) ctx)->state == parser_in_feature)
     {
+        if (((fm *) ctx)->geometry_type == "Point")
+        {
+            mapnik::geometry_type * pt;
+            std::clog << ((fm *) ctx)->point_cache.size();
+            pt = new mapnik::geometry_type(mapnik::Point);
+            pt->move_to(
+                ((fm *) ctx)->point_cache.at(0),
+                ((fm *) ctx)->point_cache.at(1));
+            ((fm *) ctx)->feature->add_geometry(pt);
+        }
         ((fm *) ctx)->done = 1;
     }
     return 1;
@@ -86,23 +96,13 @@ static int gj_number(void * ctx, const char* str, size_t t)
     std::string str_ = std::string((const char*) str, t);
     double x = boost::lexical_cast<double>(str_);
 
-    if (((fm *) ctx)->state == parser_in_coordinate_pair)
+    if (((fm *) ctx)->state == parser_in_coordinates)
     {
-        if (((fm *) ctx)->pair[0] == 1000)
-        {
-            ((fm *) ctx)->pair[0] = x;
-        }
-        else if (((fm *) ctx)->pair[1] == 1000)
-        {
-            ((fm *) ctx)->pair[1] = x;
-        }
+        ((fm *) ctx)->point_cache.push_back(x);
     }
     if (((fm *) ctx)->state == parser_in_properties)
     {
         boost::put(*((fm *) ctx)->feature, ((fm *) ctx)->property_name, x);
-    }
-    if (((fm *) ctx)->state == parser_in_coordinates)
-    {
     }
     return 1;
 }
@@ -112,41 +112,9 @@ static int gj_string(void * ctx, const unsigned char* str, size_t t)
     std::string str_ = std::string((const char*) str, t);
     if (((fm *) ctx)->state == parser_in_type)
     {
-        bool valid_type = true;
-        mapnik::geometry_type * pt;
-        if (str_ == "Point")
-        {
-            pt = new mapnik::geometry_type(mapnik::Point);
-        }
-        else if (str_ == "LineString")
-        {
-            pt = new mapnik::geometry_type(mapnik::LineString);
-        }
-        else if (str_ == "Polygon")
-        {
-            pt = new mapnik::geometry_type(mapnik::Polygon);
-        }
-        else if (str_ == "MultiPoint")
-        {
-            pt = new mapnik::geometry_type(mapnik::MultiPoint);
-        }
-        else if (str_ == "MultiLineString")
-        {
-            pt = new mapnik::geometry_type(mapnik::MultiLineString);
-        }
-        else if (str_ == "MultiPolygon")
-        {
-            pt = new mapnik::geometry_type(mapnik::MultiPolygon);
-        }
-        else { valid_type = false; }
-
-        if (valid_type)
-        {
-            ((fm *) ctx)->feature->add_geometry(pt);
-        }
+        ((fm *) ctx)->geometry_type = str_;
     }
-
-    if (((fm *) ctx)->state == parser_in_properties)
+    else if (((fm *) ctx)->state == parser_in_properties)
     {
         UnicodeString ustr = tr->transcode(str_.c_str());
         boost::put(*((fm *) ctx)->feature, ((fm *) ctx)->property_name, ustr);
@@ -156,47 +124,27 @@ static int gj_string(void * ctx, const unsigned char* str, size_t t)
 
 static int gj_start_array(void * ctx)
 {
-    int is_point = 0;
-    if (((fm *) ctx)->feature->num_geometries() > 0)
+    if (((fm *) ctx)->state == parser_in_coordinates)
     {
-        mapnik::geometry_type & geom = ((fm *) ctx)->feature->get_geometry(0);
-        if (geom.type() == mapnik::Point)
-        {
-            is_point = 1;
-        }
-    }
-    if (((fm *) ctx)->state == parser_in_coordinates || is_point)
-    {
-        ((fm *) ctx)->state = parser_in_coordinate_pair;
+        ((fm *) ctx)->coord_dimensions++;
     }
     return 1;
 }
 
 static int gj_end_array(void * ctx)
 {
-    int is_point = 0;
-    if (((fm *) ctx)->feature->num_geometries() > 0)
+    if (((fm *) ctx)->state == parser_in_coordinates)
     {
-        mapnik::geometry_type & geom = ((fm *) ctx)->feature->get_geometry(0);
-        if (geom.type() == mapnik::Point)
+        ((fm *) ctx)->coord_dimensions--;
+        if (((fm *) ctx)->coord_dimensions < 0)
         {
-            is_point = 1;
+            ((fm *) ctx)->state = parser_in_geometry;
         }
     }
-
-    if (((fm *) ctx)->state == parser_in_coordinate_pair)
+    else if (((fm *) ctx)->state == parser_in_features)
     {
-        ((fm *) ctx)->state = parser_in_coordinates;
-        if (is_point)
-        {
-            ((fm *) ctx)->state = parser_outside;
-            ((fm *) ctx)->feature->get_geometry(
-                ((fm *) ctx)->feature->num_geometries() - 1).move_to(
-                ((fm *) ctx)->pair[0],
-                ((fm *) ctx)->pair[1]);
-        }
+        ((fm *) ctx)->state = parser_outside;
     }
-
     return 1;
 }
 
@@ -237,8 +185,6 @@ geojson_featureset::geojson_featureset(
 
     state_bundle.state = parser_outside;
     state_bundle.done = 0;
-    state_bundle.pair[0] = 1000;
-    state_bundle.pair[1] = 1000;
 
     // FIXME: manually free
     hand = yajl_alloc(
@@ -275,27 +221,28 @@ geojson_featureset::geojson_featureset(
         else if (state_bundle.done == 1)
         {
             features_.push_back(state_bundle.feature);
+
+            feature_id_++;
             mapnik::feature_ptr feature(mapnik::feature_factory::create(feature_id_));
 
             // reset
-            state_bundle.pair[0] = 1000;
-            state_bundle.pair[1] = 1000;
+            state_bundle.point_cache.clear();
             state_bundle.done = 0;
+            state_bundle.geometry_type = "";
             state_bundle.feature = feature;
 
         }
 
     }
 
+    feature_id_ = 1;
 }
 
 geojson_featureset::~geojson_featureset() { }
 
 mapnik::feature_ptr geojson_featureset::next()
 {
-
     feature_id_++;
-
     if (feature_id_ <= features_.size())
     {
         return features_.at(feature_id_ - 1);

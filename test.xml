@@ -1,10 +1,7 @@
 <Map srs="+init=epsg:4326" background-color="white" minimum-version="0.7.2">
     <Style name="style">
         <Rule>
-            <PointSymbolizer/>
-            <!-- the hello world sample hardcodes 'key' as the hypothetical field name -->
-            <TextSymbolizer size="10" dx="5" dy="5" face-name="DejaVu Sans Book">[age]</TextSymbolizer>
-            <LineSymbolizer stroke="green" stroke-width="3"/>
+            <MarkersSymbolizer allow-overlap="true" width="3" stroke-width="0" />
         </Rule>
     </Style>
     <!-- this example only works in EPSG:4326 -->

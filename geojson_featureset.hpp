@@ -27,9 +27,11 @@ enum parser_state {
 
 struct fm {
     mapnik::feature_ptr feature;
-    double pair[2];
     int done;
+    int coord_dimensions;
     std::string property_name;
+    std::string geometry_type;
+    mutable std::vector<double> point_cache;
     parser_state state;
 };
 
