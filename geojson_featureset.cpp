@@ -69,11 +69,12 @@ mapnik::feature_ptr geojson_featureset::next()
 
         if (parse_result == yajl_status_error)
         {
-            char* s;
-            unsigned char *str = yajl_get_error(hand, 1,  (const unsigned char*) s, strlen(s));
-            throw mapnik::datasource_exception("GeoJSON Plugin: invalid GeoJSON detected:" +
-                        std::string((const char*) str));
-            yajl_free_error(hand, str);
+            //char* s;
+            //unsigned char *str = yajl_get_error(hand, 1,  (const unsigned char*) s, strlen(s));
+            // throw mapnik::datasource_exception("GeoJSON Plugin: invalid GeoJSON detected:" +
+            //             std::string((const char*) str));
+            throw mapnik::datasource_exception("GeoJSON Plugin: invalid GeoJSON detected");
+            // yajl_free_error(hand, str);
         }
         else if (state_bundle.done == 1)
         {
