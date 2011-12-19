@@ -6,10 +6,29 @@
 // mapnik
 #include <mapnik/datasource.hpp>
 #include "yajl/yajl_parse.h"
-#include "geojson_parser.hpp"
 
 // boost
 #include <boost/scoped_ptr.hpp> // needed for wrapping the transcoder
+
+enum parser_state {
+    parser_outside,
+    parser_in_featurecollection,
+    parser_in_features,
+    parser_in_feature,
+    parser_in_geometry,
+    parser_in_coordinates,
+    parser_in_properties,
+    parser_in_coordinate_pair,
+    parser_in_type
+};
+
+struct fm {
+    mapnik::feature_ptr feature;
+    double pair[2];
+    int done;
+    std::string property_name;
+    parser_state state;
+};
 
 // extend the mapnik::Featureset defined in include/mapnik/datasource.hpp
 class geojson_featureset : public mapnik::Featureset
