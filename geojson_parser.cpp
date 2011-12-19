@@ -1,4 +1,12 @@
+// mapnik
+#include <mapnik/feature_factory.hpp>
+#include <mapnik/geometry.hpp>
+
+// yajl
 #include "yajl/yajl_parse.h"
+
+#include "geojson_parser.hpp"
+
 #include <iostream>
 
 static int gj_start_map(void * ctx)

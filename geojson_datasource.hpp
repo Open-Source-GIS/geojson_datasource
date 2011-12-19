@@ -1,5 +1,5 @@
-#ifndef FILE_DATASOURCE_HPP
-#define FILE_DATASOURCE_HPP
+#ifndef GEOJSON_DATASOURCE_HPP
+#define GEOJSON_DATASOURCE_HPP
 
 #include <fstream>
 
