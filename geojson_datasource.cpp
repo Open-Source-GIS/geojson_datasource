@@ -39,7 +39,7 @@ void geojson_datasource::bind() const
 {
     if (is_bound_) return;
 
-    extent_.init(-20037508.34,-20037508.34,20037508.34,20037508.34);
+    extent_.init(-180,-90,180,90);
 
     is_bound_ = true;
 }

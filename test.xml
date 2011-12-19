@@ -1,12 +1,27 @@
 <Map srs="+init=epsg:4326" background-color="white" minimum-version="0.7.2">
-    <Style name="style">
+    <Style name="stylepoint">
         <Rule>
-            <MarkersSymbolizer allow-overlap="true" width="3" stroke-width="0" />
+            <MarkersSymbolizer />
+        </Rule>
+    </Style>
+    <Style name="styleline">
+        <Rule>
+            <LineSymbolizer />
         </Rule>
     </Style>
     <!-- this example only works in EPSG:4326 -->
-    <Layer name="test" srs="+init=epsg:4326">
-        <StyleName>style</StyleName>
+    <Layer name="testline" srs="+init=epsg:4326">
+        <StyleName>styleline</StyleName>
+        <Datasource>
+            <!-- here we create a 'hello' type datasource which simply
+            displays a point in the middle of the world's boundin box -->
+            <Parameter name="type">geojson</Parameter>
+            <Parameter name="file">tracks_round.geojson</Parameter>
+        </Datasource>
+    </Layer>
+   <!-- this example only works in EPSG:4326 -->
+    <Layer name="testpoint" srs="+init=epsg:4326">
+        <StyleName>stylepoint</StyleName>
         <Datasource>
             <!-- here we create a 'hello' type datasource which simply
             displays a point in the middle of the world's boundin box -->

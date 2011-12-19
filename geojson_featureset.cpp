@@ -33,7 +33,7 @@ static int gj_map_key(void * ctx, const unsigned char* key, size_t t)
         {
             ((fm *) ctx)->state = parser_in_geometry;
         }
-        else if (key_ == "type")
+        else if ((((fm *) ctx)->state == parser_in_geometry) && (key_ == "type"))
         {
             ((fm *) ctx)->state = parser_in_type;
         }
@@ -51,8 +51,8 @@ static int gj_map_key(void * ctx, const unsigned char* key, size_t t)
 
 static int gj_end_map(void * ctx)
 {
-    if (((fm *) ctx)->state == parser_in_properties ||
-        ((fm *) ctx)->state == parser_in_geometry)
+    if ((((fm *) ctx)->state == parser_in_properties) ||
+        (((fm *) ctx)->state == parser_in_geometry))
     {
         ((fm *) ctx)->state = parser_in_feature;
     }
@@ -61,13 +61,30 @@ static int gj_end_map(void * ctx)
         if (((fm *) ctx)->geometry_type == "Point")
         {
             mapnik::geometry_type * pt;
-            std::clog << ((fm *) ctx)->point_cache.size();
             pt = new mapnik::geometry_type(mapnik::Point);
             pt->move_to(
                 ((fm *) ctx)->point_cache.at(0),
                 ((fm *) ctx)->point_cache.at(1));
             ((fm *) ctx)->feature->add_geometry(pt);
         }
+        if (((fm *) ctx)->geometry_type == "LineString")
+        {
+            mapnik::geometry_type * pt;
+            pt = new mapnik::geometry_type(mapnik::LineString);
+
+            pt->set_capacity(((fm *) ctx)->point_cache.size() / 2);
+            pt->move_to(
+                ((fm *) ctx)->point_cache.at(0),
+                ((fm *) ctx)->point_cache.at(1));
+
+            for (int i = 2; i < ((fm *) ctx)->point_cache.size(); i += 2) {
+                pt->line_to(
+                    ((fm *) ctx)->point_cache.at(i),
+                    ((fm *) ctx)->point_cache.at(i + 1));
+            }
+            ((fm *) ctx)->feature->add_geometry(pt);
+        }
+        ((fm *) ctx)->state = parser_in_features;
         ((fm *) ctx)->done = 1;
     }
     return 1;
@@ -136,7 +153,7 @@ static int gj_end_array(void * ctx)
     if (((fm *) ctx)->state == parser_in_coordinates)
     {
         ((fm *) ctx)->coord_dimensions--;
-        if (((fm *) ctx)->coord_dimensions < 0)
+        if (((fm *) ctx)->coord_dimensions < 1)
         {
             ((fm *) ctx)->state = parser_in_geometry;
         }
@@ -198,7 +215,6 @@ geojson_featureset::geojson_featureset(
 
     mapnik::feature_ptr feature(mapnik::feature_factory::create(feature_id_));
 
-    state_bundle.done = 0;
     state_bundle.feature = feature;
 
     for (; itt_ < input_buffer_.length(); itt_++) {
@@ -222,20 +238,20 @@ geojson_featureset::geojson_featureset(
         {
             features_.push_back(state_bundle.feature);
 
-            feature_id_++;
-            mapnik::feature_ptr feature(mapnik::feature_factory::create(feature_id_));
+            // feature_id_++;
+            // mapnik::feature_ptr feature(mapnik::feature_factory::create(feature_id_));
 
             // reset
-            state_bundle.point_cache.clear();
+            // state_bundle.point_cache.clear();
             state_bundle.done = 0;
-            state_bundle.geometry_type = "";
-            state_bundle.feature = feature;
+            // state_bundle.geometry_type = "";
+            // state_bundle.feature = feature;
 
         }
 
     }
 
-    feature_id_ = 1;
+    feature_id_ = 0;
 }
 
 geojson_featureset::~geojson_featureset() { }

@@ -1,4 +1,5 @@
-CXX = g++
+# CXX = g++
+CXX = clang++
 
 CXXFLAGS = -fPIC -O3 $(shell mapnik-config --cflags)
 
