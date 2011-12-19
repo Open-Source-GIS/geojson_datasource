@@ -10,6 +10,9 @@
 // boost
 #include <boost/scoped_ptr.hpp> // needed for wrapping the transcoder
 
+// stl
+#include <vector>
+
 enum parser_state {
     parser_outside,
     parser_in_featurecollection,
@@ -43,6 +46,8 @@ private:
     mapnik::box2d<double> const& box_;
     mutable int feature_id_;
     mutable int file_length_;
+
+    mutable std::vector<mapnik::feature_ptr> features_;
 
     mutable std::ifstream in_;
     mutable std::string file_;

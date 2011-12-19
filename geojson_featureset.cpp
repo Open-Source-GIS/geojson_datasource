@@ -54,12 +54,10 @@ static int gj_end_map(void * ctx)
     if (((fm *) ctx)->state == parser_in_properties ||
         ((fm *) ctx)->state == parser_in_geometry)
     {
-        std::clog << "marking as in feature\n";
         ((fm *) ctx)->state = parser_in_feature;
     }
     else if (((fm *) ctx)->state == parser_in_feature)
     {
-        std::clog << "marking as done\n";
         ((fm *) ctx)->done = 1;
     }
     return 1;
@@ -88,9 +86,8 @@ static int gj_number(void * ctx, const char* str, size_t t)
     std::string str_ = std::string((const char*) str, t);
     double x = boost::lexical_cast<double>(str_);
 
-    if (((fm *) ctx)->state == parser_in_coordinates)
+    if (((fm *) ctx)->state == parser_in_coordinate_pair)
     {
-        std::cout << x << "\n";
         if (((fm *) ctx)->pair[0] == 1000)
         {
             ((fm *) ctx)->pair[0] = x;
@@ -159,7 +156,16 @@ static int gj_string(void * ctx, const unsigned char* str, size_t t)
 
 static int gj_start_array(void * ctx)
 {
-    if (((fm *) ctx)->state == parser_in_coordinates)
+    int is_point = 0;
+    if (((fm *) ctx)->feature->num_geometries() > 0)
+    {
+        mapnik::geometry_type & geom = ((fm *) ctx)->feature->get_geometry(0);
+        if (geom.type() == mapnik::Point)
+        {
+            is_point = 1;
+        }
+    }
+    if (((fm *) ctx)->state == parser_in_coordinates || is_point)
     {
         ((fm *) ctx)->state = parser_in_coordinate_pair;
     }
@@ -168,17 +174,27 @@ static int gj_start_array(void * ctx)
 
 static int gj_end_array(void * ctx)
 {
+    int is_point = 0;
+    if (((fm *) ctx)->feature->num_geometries() > 0)
+    {
+        mapnik::geometry_type & geom = ((fm *) ctx)->feature->get_geometry(0);
+        if (geom.type() == mapnik::Point)
+        {
+            is_point = 1;
+        }
+    }
+
     if (((fm *) ctx)->state == parser_in_coordinate_pair)
     {
         ((fm *) ctx)->state = parser_in_coordinates;
-    }
-    else if (((fm *) ctx)->state == parser_in_coordinates)
-    {
-        ((fm *) ctx)->state = parser_outside;
-        ((fm *) ctx)->feature->get_geometry(
-            ((fm *) ctx)->feature->num_geometries() - 1).move_to(
-            ((fm *) ctx)->pair[0],
-            ((fm *) ctx)->pair[1]);
+        if (is_point)
+        {
+            ((fm *) ctx)->state = parser_outside;
+            ((fm *) ctx)->feature->get_geometry(
+                ((fm *) ctx)->feature->num_geometries() - 1).move_to(
+                ((fm *) ctx)->pair[0],
+                ((fm *) ctx)->pair[1]);
+        }
     }
 
     return 1;
@@ -233,14 +249,6 @@ geojson_featureset::geojson_featureset(
 
     std::getline(in_, input_buffer_);
 
-}
-
-geojson_featureset::~geojson_featureset() { }
-
-mapnik::feature_ptr geojson_featureset::next()
-{
-
-    std::clog << "geojson_featureset::next() on " << itt_ << "\n";
 
     mapnik::feature_ptr feature(mapnik::feature_factory::create(feature_id_));
 
@@ -266,21 +274,34 @@ mapnik::feature_ptr geojson_featureset::next()
         }
         else if (state_bundle.done == 1)
         {
-            std::clog << "geojson_featureset::next exiting at " << itt_ << "\n";
-            return state_bundle.feature;
+            features_.push_back(state_bundle.feature);
+            mapnik::feature_ptr feature(mapnik::feature_factory::create(feature_id_));
+
+            // reset
+            state_bundle.pair[0] = 1000;
+            state_bundle.pair[1] = 1000;
+            state_bundle.done = 0;
+            state_bundle.feature = feature;
+
         }
-        /*
-        else if (parse_result == yajl_status_ok)
-        {
-            std::clog << "geojson_featureset::next status ok at " << itt_ << "\n";
-            return mapnik::feature_ptr();
-        }
-        */
+
     }
+
+}
+
+geojson_featureset::~geojson_featureset() { }
+
+mapnik::feature_ptr geojson_featureset::next()
+{
 
     feature_id_++;
 
-    // return state_bundle.feature;
-    return mapnik::feature_ptr();
-
+    if (feature_id_ <= features_.size())
+    {
+        return features_.at(feature_id_ - 1);
+    }
+    else
+    {
+        return mapnik::feature_ptr();
+    }
 }
