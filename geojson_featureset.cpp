@@ -238,14 +238,14 @@ geojson_featureset::geojson_featureset(
         {
             features_.push_back(state_bundle.feature);
 
-            // feature_id_++;
-            // mapnik::feature_ptr feature(mapnik::feature_factory::create(feature_id_));
+            feature_id_++;
+            mapnik::feature_ptr feature(mapnik::feature_factory::create(feature_id_));
 
             // reset
-            // state_bundle.point_cache.clear();
+            state_bundle.point_cache.clear();
             state_bundle.done = 0;
-            // state_bundle.geometry_type = "";
-            // state_bundle.feature = feature;
+            state_bundle.geometry_type = "";
+            state_bundle.feature = feature;
 
         }
 
