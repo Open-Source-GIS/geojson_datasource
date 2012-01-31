@@ -27,7 +27,7 @@ geojson_datasource::geojson_datasource(parameters const& params, bool bind)
     file_(*params_.get<std::string>("file","")),
     extent_()
 {
-    if (file_.empty()) throw mapnik::datasource_exception("JIT Plugin: missing <file> parameter");
+    if (file_.empty()) throw mapnik::datasource_exception("GeoJSON Plugin: missing <file> parameter");
     if (bind)
     {
         this->bind();
@@ -54,9 +54,17 @@ std::string geojson_datasource::name()
     return name_;
 }
 
-int geojson_datasource::type() const
-{
+
+boost::optional<mapnik::datasource::geometry_t> geojson_datasource::get_geometry_type() const {
+    return boost::optional<mapnik::datasource::geometry_t>();
+}
+
+mapnik::datasource::datasource_t geojson_datasource::type() const {
     return type_;
+}
+
+std::map<std::string, mapnik::parameters> geojson_datasource::get_statistics() const {
+    return statistics_;
 }
 
 // FIXME: implement

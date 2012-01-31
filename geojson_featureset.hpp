@@ -1,16 +1,9 @@
 #ifndef GEOJSON_FEATURESET_HPP
 #define GEOJSON_FEATURESET_HPP
 
-#include <fstream>
-
-// mapnik
 #include <mapnik/datasource.hpp>
 #include "yajl/yajl_parse.h"
-
-// boost
-#include <boost/scoped_ptr.hpp> // needed for wrapping the transcoder
-
-// stl
+#include <boost/scoped_ptr.hpp>
 #include <vector>
 
 enum parser_state {
@@ -25,42 +18,42 @@ enum parser_state {
     parser_in_type
 };
 
-struct fm {
-    mapnik::feature_ptr feature;
+struct pstate {
     int done;
     int coord_dimensions;
     std::string property_name;
     std::string geometry_type;
-    mutable std::vector<double> point_cache;
+    mapnik::feature_ptr feature;
+    std::vector< double > point_cache;
     parser_state state;
+    pstate() :
+        done(0),
+        coord_dimensions(0),
+        property_name(""),
+        geometry_type(""),
+        feature(),
+        point_cache(),
+        state()
+    { };
 };
 
-// extend the mapnik::Featureset defined in include/mapnik/datasource.hpp
 class geojson_featureset : public mapnik::Featureset
 {
 public:
     geojson_featureset(mapnik::box2d<double> const& box,
-            std::string const& encoding,
-            std::string const& file);
+            std::string input_string,
+            std::string const& encoding);
     virtual ~geojson_featureset();
     mapnik::feature_ptr next();
+
 private:
-    mapnik::box2d<double> const& box_;
-    mutable int feature_id_;
-    mutable int file_length_;
-
+    mapnik::box2d<double> box_;
+    mutable unsigned int feature_id_;
+    mutable std::string input_string_;
+    boost::shared_ptr<mapnik::transcoder> tr_;
     mutable std::vector<mapnik::feature_ptr> features_;
-
-    mutable std::ifstream in_;
-    mutable std::string file_;
-
-    // parsing related
-    mutable std::string input_buffer_;
-    int itt_;
+    unsigned itt_;
     yajl_handle hand;
-    fm state_bundle;
-
-    boost::scoped_ptr<mapnik::transcoder> tr_;
 };
 
-#endif // HELLO_FEATURESET_HPP
+#endif // GEOJSON_FEATURESET_HPP
